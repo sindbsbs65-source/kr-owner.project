@@ -22,8 +22,6 @@ jobs:
 
       - name: Android SDK
         run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
             "platform-tools" \
@@ -36,7 +34,7 @@ jobs:
           gradle-version: '8.10.2'
 
       - name: Build APK
-        working-directory: kr_android
+        working-directory: project/kr_android
         run: |
           gradle :app:assembleDebug --no-daemon --stacktrace
 
@@ -44,5 +42,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: KR-Owner-APK
-          path: kr_android/app/build/outputs/apk/debug/app-debug.apk
+          path: project/kr_android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

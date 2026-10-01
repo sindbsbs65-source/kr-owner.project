@@ -1,4 +1,4 @@
-name: Check Project
+name: Build Android APK
 
 on:
   workflow_dispatch:
@@ -7,17 +7,67 @@ on:
       - main
 
 jobs:
-  check:
+  build:
     runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Show repository
+      - name: Extract project
         run: |
-          echo "=== CURRENT DIRECTORY ==="
-          pwd
-          echo
-          echo "=== ALL FILES ==="
-          find . -type f | sort
+          unzip -o kr_owner_project_final.zip
+          echo "=== FILES ==="
+          find . -maxdepth 6 -type f ! -path './.git/*' | sort
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Find Android project
+        id: project
+        run: |
+          FILE=$(find . -type f \
+            \( -name "build.gradle" -o -name "build.gradle.kts" \) \
+            ! -path './.git/*' | head -n 1)
+
+          if [ -z "$FILE" ]; then
+            echo "Android project not found"
+            exit 1
+          fi
+
+          DIR=$(dirname "$FILE")
+          echo "Found: $FILE"
+          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Build APK
+        working-directory: ${{ steps.project.outputs.dir }}
+        run: |
+          gradle :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Find APK
+        run: |
+          echo "=== APK FILES ==="
+          find . -type f -name "*.apk" -print
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: KR-Owner-APK
+          path: '**/*.apk'
+          if-no-files-found: error

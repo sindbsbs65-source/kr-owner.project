@@ -14,36 +14,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install unzip
-        run: sudo apt-get update && sudo apt-get install -y unzip
-
-      - name: Extract project
-        run: |
-          mkdir -p project
-          ZIP=$(find . -maxdepth 1 -type f -name "*.zip" | head -n 1)
-          if [ -z "$ZIP" ]; then
-            echo "ZIP file not found"
-            exit 1
-          fi
-          unzip -q "$ZIP" -d project
-
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
+
+      - name: Set up Android
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.9'
+          gradle-version: "8.10.2"
 
       - name: Build APK
-        working-directory: project/kr_android
-        run: gradle assembleDebug --no-daemon
+        working-directory: kr_android
+        run: gradle :app:assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: KR-Owner-APK
-          path: project/kr_android/app/build/outputs/apk/**/*.apk
+          path: kr_android/app/build/outputs/apk/debug/app-debug.apk
